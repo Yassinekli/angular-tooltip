@@ -5,7 +5,7 @@ import { Directive, ElementRef, HostListener, Input } from '@angular/core';
 })
 export class TooltipDirective {
 
-  tooltipElement: HTMLSpanElement;
+  tooltipWrapper: HTMLDivElement;
   @Input() tooltipText: string;
   @Input() tooltipPosition: string;
   tooltipTop: number = 0;
@@ -16,25 +16,27 @@ export class TooltipDirective {
   /* ------------ Events ------------ */
   @HostListener('mouseenter') 
   onMouseEnter() {
-    this.tooltipElement = document.getElementById('tooltip');
+    this.tooltipWrapper = document.getElementById('tooltip-wrapper') as HTMLDivElement;
     
     // Change Tooltip Text.
     this.changeTooltipText();
 
     //
-    this.calculateTooltipPosition(this.getElementRect());
+    let distances: ElementTopBottomRightLeft = this.getHoveredElementDistances(this.getElementRect());
+    
+    console.log(this.getRightPositioning(distances));
 
     // Change Tooltip Position.
-    this.setTooltipPosition();
+    /*this.setTooltipPosition();
 
     // Show Tooltip.
-    this.showTooltip();
+    this.showTooltip(); */
   }
   
   @HostListener('mouseleave') 
   onMouseLeave() {
     // Remove added class
-    this.tooltipElement.classList.remove('tooltip-' + this.tooltipPosition);
+    this.tooltipWrapper.classList.remove('tooltip-' + this.tooltipPosition);
     
     // Hide Tooltip.
     // this.hideTooltip();
@@ -42,52 +44,67 @@ export class TooltipDirective {
   
   /* ------------ Methods ------------ */
   private changeTooltipText() {
-    this.tooltipElement.innerText = this.tooltipText;
+    (document.getElementById('tooltip') as HTMLDivElement).innerText = this.tooltipText;
   }
 
   private getElementRect(): DOMRect{
     return this.el.nativeElement.getBoundingClientRect();
   }
   
-  private calculateTooltipPosition({ top, left, width, height }) {
-    // Get tooltip element width & height.
-    let tooltipWidth = this.tooltipElement.getBoundingClientRect().width;
-    let tooltipHeight = this.tooltipElement.getBoundingClientRect().height;
-    
+  private getHoveredElementDistances({ top, bottom, right, left, width, height }: DOMRect): ElementTopBottomRightLeft
+  {
+    right = window.innerWidth - (width + left);
+    bottom = window.innerHeight - (height + top);
+
+    return {top, bottom, right, left}
+  }
+
+
+  getRightPositioning(distances: ElementTopBottomRightLeft): string{
+    let tooltipMargins: ElementTopBottomRightLeft = {top: 0, bottom: 0, right: 0, left: 0 };
+
+    let marginTop = window.getComputedStyle(this.tooltipWrapper).marginTop;
+    let marginBottom = window.getComputedStyle(this.tooltipWrapper).marginBottom;
+    let marginRight = window.getComputedStyle(this.tooltipWrapper).marginRight;
+    let marginLeft = window.getComputedStyle(this.tooltipWrapper).marginLeft;
+
+    tooltipMargins.top = parseFloat(marginTop.substring(0, marginTop.length - 2));
+    tooltipMargins.bottom = parseFloat(marginBottom.substring(0, marginBottom.length - 2));
+    tooltipMargins.right = parseFloat(marginRight.substring(0, marginRight.length - 2));
+    tooltipMargins.left = parseFloat(marginLeft.substring(0, marginLeft.length - 2));
+
+    let tooltipWidth = this.tooltipWrapper.getBoundingClientRect().width + (tooltipMargins.right + tooltipMargins.left);
+    let tooltipHeight = this.tooltipWrapper.getBoundingClientRect().height + (tooltipMargins.top + tooltipMargins.bottom);
+
+    let selectedPosition = distances[this.tooltipPosition];
     switch (this.tooltipPosition) {
       case 'top':
-          this.setTopCoordinations(top, tooltipHeight, width, tooltipWidth, left);
-          if(this.tooltipTop < 0){
-            this.removeTooltipArrowClass();
-            this.tooltipPosition = 'bottom';
-            this.calculateTooltipPosition({ top, left, width, height });
-          }
-          this.addTooltipArrowClass();
-        break;
-
+        if(tooltipHeight <= selectedPosition)
+          return 'top';
+          
       case 'bottom':
-          this.setBottomCoordinations(top, height, width, tooltipWidth, left);
-          let clientHeight = document.documentElement.clientHeight;
-          console.log(this.tooltipTop)
-          console.log(clientHeight)
-          if(this.tooltipTop > clientHeight){
-            this.removeTooltipArrowClass();
-            this.tooltipPosition = 'top';
-            this.calculateTooltipPosition({ top, left, width, height });
-          }
-          this.addTooltipArrowClass();
-        break;
+        if(tooltipHeight <= selectedPosition)
+          return 'bottom';
 
       case 'right':
-            this.setRightCoordinations(top, height, width, left, tooltipHeight);
-            this.addTooltipArrowClass();
-          break;
-          
-        case 'left':
-          this.setLeftCoordinations(top, height, left, tooltipWidth, tooltipHeight);
-          this.addTooltipArrowClass();
-        break;
+        if(tooltipHeight <= selectedPosition)
+          return 'right';
+
+      case 'left':
+        if(tooltipHeight <= selectedPosition)
+          return 'left';
+    
+      default:
+        if(tooltipHeight <= distances.top)
+          return 'top';
+        if(tooltipHeight <= distances.bottom)
+          return 'bottom';
+        if(tooltipWidth <= distances.right)
+          return 'right';
+        if(tooltipWidth <= distances.left)
+          return 'left';
     }
+    return undefined;
   }
 
   private setTopCoordinations(
@@ -102,60 +119,34 @@ export class TooltipDirective {
     this.tooltipLeft = ((hoveredWidth / 2) - (tooltipWidth / 2)) + (hoveredLeft - 6);
   }
 
-  private setBottomCoordinations(
-    hoveredTop: number, 
-    hoveredHeight: number, 
-    hoveredWidth: number, 
-    tooltipWidth: number, 
-    hoveredLeft: number
-  ) 
-  {
-    this.tooltipTop = hoveredTop + hoveredHeight;
-    this.tooltipLeft = ((hoveredWidth / 2) - (tooltipWidth / 2)) + (hoveredLeft - 6);
-  }
-
-  private setRightCoordinations(
-    hoveredTop: number, 
-    hoveredHeight: number, 
-    hoveredWidth: number, 
-    hoveredLeft: number,
-    tooltipHeight: number 
-  ) 
-  {
-    this.tooltipTop = ((hoveredTop + (hoveredHeight / 2)) - (tooltipHeight / 2)) - 6;
-    this.tooltipLeft = hoveredLeft + hoveredWidth;
-  }
-
-  private setLeftCoordinations(
-    hoveredTop: number, 
-    hoveredHeight: number, 
-    hoveredLeft: number,
-    tooltipWidth: number,
-    tooltipHeight: number
-  ) 
-  {
-    this.tooltipTop = ((hoveredTop + (hoveredHeight / 2)) - (tooltipHeight / 2)) - 6;
-    this.tooltipLeft = hoveredLeft - tooltipWidth - 12;
-  }
-
   private addTooltipArrowClass() {
-    this.tooltipElement.classList.add('tooltip-' + this.tooltipPosition);
+    this.tooltipWrapper.classList.add('tooltip-' + this.tooltipPosition);
   }
   
   private removeTooltipArrowClass() {
-    this.tooltipElement.classList.remove('tooltip-' + this.tooltipPosition);
+    this.tooltipWrapper.classList.remove('tooltip-' + this.tooltipPosition);
   }
 
   private setTooltipPosition(): void{
-    this.tooltipElement.style.top = this.tooltipTop + 'px';
-    this.tooltipElement.style.left = this.tooltipLeft + 'px';  
+    this.tooltipWrapper.style.top = this.tooltipTop + 'px';
+    this.tooltipWrapper.style.left = this.tooltipLeft + 'px';  
   }
   
   private showTooltip(): void{
-    this.tooltipElement.style.opacity = '1';
+    this.tooltipWrapper.style.opacity = '1';
   }
   
   private hideTooltip(): void{
-    this.tooltipElement.style.opacity = '0';
+    this.tooltipWrapper.style.opacity = '0';
   }
+}
+
+
+
+
+interface ElementTopBottomRightLeft{
+  top: number,
+  bottom: number,
+  right: number,
+  left: number
 }

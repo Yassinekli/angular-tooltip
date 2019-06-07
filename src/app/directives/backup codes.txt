@@ -1,0 +1,64 @@
+
+      case 'bottom':
+          this.setBottomCoordinations(top, height, width, tooltipWidth, left);
+          let clientHeight = document.documentElement.clientHeight;
+          console.log(this.tooltipTop)
+          console.log(clientHeight)
+          if(this.tooltipTop > clientHeight){
+            this.removeTooltipArrowClass();
+            this.tooltipPosition = 'top';
+            this.calculateTooltipPosition({ top, left, width, height });
+          }
+          this.addTooltipArrowClass();
+        break;
+
+      case 'right':
+            this.setRightCoordinations(top, height, width, left, tooltipHeight);
+            this.addTooltipArrowClass();
+          break;
+          
+        case 'left':
+          this.setLeftCoordinations(top, height, left, tooltipWidth, tooltipHeight);
+          this.addTooltipArrowClass();
+        break;
+
+
+
+
+
+        
+  private setBottomCoordinations(
+    hoveredTop: number, 
+    hoveredHeight: number, 
+    hoveredWidth: number, 
+    tooltipWidth: number, 
+    hoveredLeft: number
+  ) 
+  {
+    this.tooltipTop = hoveredTop + hoveredHeight;
+    this.tooltipLeft = ((hoveredWidth / 2) - (tooltipWidth / 2)) + (hoveredLeft - 6);
+  }
+
+  private setRightCoordinations(
+    hoveredTop: number, 
+    hoveredHeight: number, 
+    hoveredWidth: number, 
+    hoveredLeft: number,
+    tooltipHeight: number 
+  ) 
+  {
+    this.tooltipTop = ((hoveredTop + (hoveredHeight / 2)) - (tooltipHeight / 2)) - 6;
+    this.tooltipLeft = hoveredLeft + hoveredWidth;
+  }
+
+  private setLeftCoordinations(
+    hoveredTop: number, 
+    hoveredHeight: number, 
+    hoveredLeft: number,
+    tooltipWidth: number,
+    tooltipHeight: number
+  ) 
+  {
+    this.tooltipTop = ((hoveredTop + (hoveredHeight / 2)) - (tooltipHeight / 2)) - 6;
+    this.tooltipLeft = hoveredLeft - tooltipWidth - 12;
+  }
